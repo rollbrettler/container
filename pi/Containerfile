@@ -1,0 +1,31 @@
+FROM node:26
+
+ARG TARGETARCH
+
+RUN npm config set min-release-age=7
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent vitest @vitest/browser-playwright
+RUN node /usr/local/lib/node_modules/@vitest/browser-playwright/node_modules/playwright/cli.js install --with-deps chromium
+RUN npm install -g @anthropic-ai/claude-code
+
+RUN apt-get update && \
+    apt-get install -y fd-find yq openssl libssl-dev sqlite3 zstd && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN ARCH=$(uname -m) && \
+    curl -LO "https://github.com/BurntSushi/ripgrep/releases/download/15.2.0/ripgrep-15.2.0-${ARCH}-unknown-linux-musl.tar.gz" && \
+    tar -C /usr/local/bin -xzf "ripgrep-15.2.0-${ARCH}-unknown-linux-musl.tar.gz" && \
+    mv "/usr/local/bin/ripgrep-15.2.0-${ARCH}-unknown-linux-musl/rg" /usr/local/bin/rg && \
+    rm -r "/usr/local/bin/ripgrep-15.2.0-${ARCH}-unknown-linux-musl" && \
+    rm "ripgrep-15.2.0-${ARCH}-unknown-linux-musl.tar.gz"
+
+RUN curl -LO https://go.dev/dl/go1.26.5.linux-${TARGETARCH}.tar.gz && \
+    tar -C /usr/local -xzf go1.26.5.linux-${TARGETARCH}.tar.gz && \
+    rm go1.26.5.linux-${TARGETARCH}.tar.gz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
+RUN curl -LO "https://ollama.com/download/ollama-linux-${TARGETARCH}.tar.zst" && \
+    tar --zstd -C /usr/local -xf "ollama-linux-${TARGETARCH}.tar.zst" && \
+    rm "ollama-linux-${TARGETARCH}.tar.zst"
+
+ENV PI_OFFLINE=true
